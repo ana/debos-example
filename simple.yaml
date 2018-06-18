@@ -1,0 +1,36 @@
+{{- $architecture := or .architecture "arm64" -}}
+{{- $suite := or .suite "stretch" -}}
+{{ $image := or .image (printf "debian-%s-%s.tgz" $suite $architecture) }}
+
+architecture: {{ $architecture }}
+
+actions:
+  - action: debootstrap
+    suite: {{ $suite }}
+    components:
+      - main
+    mirror: http://deb.debian.org/debian
+    variant: minbase
+
+  - action: apt
+    recommends: false
+    packages:
+      - adduser
+      - sudo
+
+  - action: run
+    description: Set hostname
+    chroot: true
+    command: echo debian-{{ $suite }}-{{ $architecture }} > /etc/hostname
+
+  - action: run
+    chroot: true
+    script: scripts/setup-user.sh
+
+  - action: overlay
+    description: Add sudo configuration
+    source: overlays/sudo
+
+  - action: pack
+    file: {{ $image }}
+    compression: gz

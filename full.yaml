@@ -1,0 +1,61 @@
+{{- $architecture := or .architecture "arm64" -}}
+{{- $suite := or .suite "stretch" -}}
+{{ $type := or .type "min" }}
+{{ $image := or .image (printf "debian-%s-%s.tgz" $suite $architecture) }}
+{{ $ext4 := or .image (printf "debian-%s-%s.ext4" $suite $architecture) }}
+
+architecture: {{ $architecture }}
+
+actions:
+  - action: debootstrap
+    suite: {{ $suite }}
+    components:
+      - main
+    mirror: http://deb.debian.org/debian
+    variant: minbase
+
+  - action: apt
+    recommends: false
+    packages:
+      - adduser
+      - sudo
+{{- if eq $architecture "armhf" "arm64" }}
+      - python-libsoc
+{{- end }}
+
+  - action: run
+    description: Set hostname
+    chroot: true
+    command: echo debian-{{ $suite }}-{{ $architecture }} > /etc/hostname
+
+  - action: run
+    chroot: true
+    script: scripts/setup-user.sh
+
+  - action: overlay
+    description: Add sudo configuration
+    source: overlays/sudo
+
+  - action: pack
+    file: {{ $image }}
+    compression: gz
+
+{{ if eq $type "full" }}
+  - action: image-partition
+    imagename: {{ $ext4 }}
+    imagesize: 1GB
+    partitiontype: msdos
+    mountpoints:
+      - mountpoint: /
+        partition: root
+    partitions:
+      - name: root
+        fs: ext4
+        start: 0%
+        end: 100%
+        flags: [ boot ]
+
+  - action: filesystem-deploy
+    description: Deploying filesystem onto image
+{{end}}
+
