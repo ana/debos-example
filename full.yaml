@@ -2,7 +2,7 @@
 {{- $suite := or .suite "stretch" -}}
 {{ $type := or .type "min" }}
 {{ $image := or .image (printf "debian-%s-%s.tgz" $suite $architecture) }}
-{{ $ext4 := or .image (printf "debian-%s-%s.ext4" $suite $architecture) }}
+{{ $ext4 := or .ext4 (printf "debian-%s-%s.ext4" $suite $architecture) }}
 
 architecture: {{ $architecture }}
 
